@@ -1,4 +1,8 @@
-//coop 29/03/2023
+//coop 18/05/2023 1
+//coop v1 7/6/23, removed fast io, not needed. few tweaks to layout etc.
+
+#define VERSION "V 1.0 7/6/23"
+
 #include <Arduino.h>
 #include <stdio.h>
 #include "xmodem.h"
@@ -61,27 +65,16 @@ unsigned long flashaddress;
 
 //define COMMANDS
 #define NOCOMMAND    0
-#define VERSION      1
 #define SET_ADDRESS  2
-#define CLEAR_RAM    3
+#define HELP 3
 
 #define READ_HEX    10
-#define READ_BIN    11
-#define READ_ITL    12
-
-#define WRITE_HEX   20
 
 #define WRITE_BIN   21
-#define WRITE_ITL   22
 #define WRITE_XMODEM 23
-
-#define FLASH_IDENTIFY 30
-#define FLASH_ERASE 31
 
 #define MD5SUM 40
 #define BLANKCHECK 41
-#define ADDEBUG 42
-
 
 /*****************************************************************
  *
@@ -90,7 +83,7 @@ unsigned long flashaddress;
  ****************************************************************/
 
 // switch IO lines of databus to INPUT state
-#ifdef OLD_IO
+
 void data_bus_input() {
    
   pinMode(D0, INPUT);
@@ -102,16 +95,8 @@ void data_bus_input() {
   pinMode(D6, INPUT);
   pinMode(D7, INPUT);
 }
-#endif
 
-#ifdef FAST_IO
-void      data_bus_input() {
-  DDRD = DDRD & 0x03; // leave bits 0 and 1 as is
-  DDRB = DDRB & 0xfc; // leave bits 7 to 2 as is. 
-}
-#endif
 
-#ifdef OLD_IO
 //switch IO lines of databus to OUTPUT state
 void data_bus_output() {
   pinMode(D0, OUTPUT);
@@ -123,17 +108,7 @@ void data_bus_output() {
   pinMode(D6, OUTPUT);
   pinMode(D7, OUTPUT);
 }
-#endif
 
-#ifdef FAST_IO
-void data_bus_output() {
-  DDRD = DDRD | 0xfc; // leave bits 0 and 1 as is
-  DDRB = DDRB | 0x03; // leave bits 7 to 2 as is. 
-}
-
-#endif
-
-#ifdef OLD_IO
 //read a complete byte from the bus
 //be sure to set data_bus to input before
 byte read_data_bus()
@@ -148,20 +123,7 @@ byte read_data_bus()
           digitalRead(D0));
 
 }
-#endif
 
-#ifdef FAST_IO
-byte read_data_bus()
-{
-
-  byte b = ((PIND & 0xfc) >> 2) | ((PINB & 0x03) << 6);
-  return b;
-  
-}
-#endif
-
-
-#ifdef OLD_IO
 //write a byte to the data bus
 //be sure to set data_bus to output before
 void write_data_bus(byte data)
@@ -178,19 +140,7 @@ void write_data_bus(byte data)
   //digitalWrite(D3, (data >> 3) & 0x01);
   //digitalWrite(D4, (data >> 4) & 0x01);
   //digitalWrite(D5, (data >> 5) & 0x01);
-  
-  
-}
-#endif
-
-#ifdef FAST_IO
-void write_data_bus(byte data)
-{
-  PORTD = (PORTD & 0x03) | ( data << 2 );
-  PORTB = (PORTB & 0xfc) | (data >> 6);  
-}
-
-#endif
+ }
 
 #ifdef HC595
 
@@ -248,64 +198,25 @@ void fastShiftOut(byte data) {
 
 //short function to set the OE(output enable line of the eeprom)
 // attention, this line is LOW - active
-#ifdef OLD_IO
+
 void set_oe (byte state)
 {
   digitalWrite(OE, state);
 }
-#endif
 
-#ifdef FAST_IO
-void set_oe (byte state)
-{
-  if (state==LOW) {
-     PORTC &= ~_BV(PORTC_OE);
-  } else {
-     PORTC |= _BV(PORTC_OE);
-  }
-}
-#endif
-
-#ifdef OLD_IO
 //short function to set the CE(chip enable line of the eeprom)
 // attention, this line is LOW - active
 void set_ce (byte state)
 {
   digitalWrite(CE, state);
 }
-#endif
 
-#ifdef FAST_IO
-void set_ce (byte state)
-{
-   if (state==LOW) {
-     PORTC &= ~_BV(PORTC_CE);
-  } else {
-     PORTC |= _BV(PORTC_CE);
-  }
-}
-#endif
-
-#ifdef OLD_IO
 //short function to set the WE(write enable line of the eeprom)
 // attention, this line is LOW - active
 void set_we (byte state)
 {
   digitalWrite(WE, state);
 }
-#endif
-
-#ifdef FAST_IO
-void set_we (byte state)
-{
-   if (state==LOW) {
-     PORTC &= ~_BV(PORTC_WE);
-  } else {
-     PORTC |= _BV(PORTC_WE);
-  }
-}
-#endif
-
 
 //highlevel function to read a byte from a current address of 4040 and then bump it up one
 byte read_next_byte(void)
@@ -402,10 +313,8 @@ void readCommand() {
         Serial.write(8);
       }
       if ((c>31) && (c<127)) {
-#ifdef ECHO_ON            
-      Serial.write(c); // echo it back
-#endif
       cmdbuf[idx++] = c;
+      Serial.write(c);
       }
       
     }
@@ -432,23 +341,11 @@ byte parseCommand() {
     case 'a':
       retval = SET_ADDRESS;
       break;
-    case 'c':
-      retval = CLEAR_RAM;
-      break;
     case 'r':
       retval = READ_HEX;
       break;
     case 'w':
       retval = WRITE_XMODEM;
-      break;
-    case 't':  // write TWO bytes t xxxxx 0aabb
-      retval = WRITE_HEX;
-      break;  
-    case 'i':
-      retval = FLASH_IDENTIFY;
-      break;
-    case 'e':
-      retval = FLASH_ERASE;
       break;
     case 'm':
       retval = MD5SUM;
@@ -456,8 +353,8 @@ byte parseCommand() {
     case 'b':
       retval = BLANKCHECK;
       break;
-    case 'x':
-      retval = ADDEBUG;
+    case 'h':
+      retval = HELP;
       break;
     default:
       retval = NOCOMMAND;
@@ -562,18 +459,8 @@ void read_block(unsigned long  from, unsigned long  to, int linelength)
     outcount = (++outcount % linelength);
 
   }
+  Serial.print("\r\n");
 }  
-//dcdcdcdc
-void setaddress(unsigned long  from)
-{
-  set_address_bus(from);
-      printAddress(from);
-      Serial.print(" : ");
-      set_address_bus(from);
-//      byte data = read_next_byte();
-//*    printByte(data);
-     Serial.println(); 
-}
 
 void read_md5(unsigned long startAddress, unsigned long dataLength) {
   unsigned long  bytesleft;
@@ -628,32 +515,14 @@ void blank_check(unsigned long startAddress, unsigned long dataLength) {
      }
   }   
   if (found_non_ff) {
-    Serial.print("Found byte ");
+    Serial.print("\n\rFound byte ");
     printByte(b);
     Serial.print(" at ");
     printAddress(flashaddress);
     Serial.println();
   } else {
-    Serial.println("Scan complete. Only FFs found");
+    Serial.println("Scan complete. Only FF\'s found");
   }
-  
-}
-
-// debug function
-void write_two_bytes(unsigned long from, byte a, byte b)
-{
-  // prep
-  //special_flash_write(0x0000, 0xf0); // read-reset
-  
-  flashaddress=from;
-  set_address_bus(flashaddress);
-  
-  eprom_write_next_byte(a);
-  eprom_write_next_byte(b);
-  
-  //print a newline after the last data line
-  Serial.println();
-  Serial.println("Put Vcc back to 5V, and Vpp back to 5V (or G*Vpp back to Arduino A4");
 }
 
 /**
@@ -681,23 +550,25 @@ void printByte(byte data) {
  * MAIN
  *
  *************************************************/
-void setup() {
+void menu() {
 //menu as a constant
-static const char MMENU[] PROGMEM = "Started.\n\r"
-  "  a nnnnn - Set address\n\r"
+static const char MMENU[] PROGMEM ="\n\r"
+  "  a nnnnn - Set address (for debug)\n\r"
   "  r nnnnn mmmmm - show mmmmm bytes at address nnnnn\n\r"
   "  w nnnnn - write to eprom using xmodem transfer\n\r"
   "  m nnnnn mmmmm - md5sum rom content starting at nnnnn for mmmmmm bytes long\n\r"
-  "  b nnnnn mmmmm - Check for FFs from nnnnn for mmmmmm bytes long\n\r";
-  
+  "  b nnnnn mmmmm - Check for FF\'s from nnnnn for mmmmmm bytes long\n\r"
+  "  h repeat this menu\n\r";
+  Serial.print((__FlashStringHelper*)MMENU);
+}
+
+void setup() {
+
 #ifdef HC595
   pinMode(DS,OUTPUT);
   pinMode(LATCH,OUTPUT);
   pinMode(CLOCK,OUTPUT);
 #endif
-
-//  pinMode(LED_BUILTIN, OUTPUT);
-
   
   pinMode(CE, OUTPUT);
   digitalWrite(CE, HIGH);
@@ -713,17 +584,11 @@ static const char MMENU[] PROGMEM = "Started.\n\r"
 
   xmodem_set_config(XMODEM_MODE_ORIGINAL);
   Serial.begin(115200);
-
- // Serial.println("Started.");
- // Serial.println("  r nnnnn mmmmm - show mmmmm bytes at address nnnnn");
- // Serial.println("  w nnnnn - write to eprom using xmodem transfer");
- // Serial.println("  m nnnnn mmmmm - md5sum rom content starting at nnnnn for mmmmmm bytes long");
- // Serial.println("  b nnnnn mmmmm - Check for FFs from nnnnn for mmmmmm bytes long");
- // Serial.println("  x nnnnn - Debug set address pins.");
-  Serial.print((__FlashStringHelper*)MMENU);
+  Serial.print("Started ");  
+  Serial.print(VERSION);
+  menu();
 }
 
-/////////////////////////
 static bool data_handler(const uint8_t* buffer, size_t size)
 {
   for(int c=0; c<size; c++) {
@@ -734,11 +599,6 @@ static bool data_handler(const uint8_t* buffer, size_t size)
 
 static bool input_handler(int c)
 {
-//  if (c == 13)
-//  {
-//    change_settings();
-//    return true;
-//  }
   return false;
 }
 
@@ -754,29 +614,29 @@ static const char MINST1[] PROGMEM = "Switch to PGM on the board, then\n\r"
   "start an xmodem transfer in your terminal ...\n\r";
 static const char MINST2[] PROGMEM = "\n\rTransfer finished. switch back to NORM before any other command.\n\r";
 
-//  if (loop_cmd == NOCOMMAND) {
     Serial.print("\r% "); // show the prompt
     readCommand();
-#ifdef ECHO_ON    
-    Serial.println(""); // only required in ECHO mode
-#endif    
     byte cmd = parseCommand();
+    Serial.print("\n\r");
     
     switch (cmd) {
 
+      case HELP:
+        menu();
+        break;
+        
       // setting the address like this is mainly used for testing to see if your 74HC595s or 74LS374s are working.
       case SET_ADDRESS:
         // Set the address bus to an arbitrary value.
         // Useful for debugging shift-register wiring, byte-order.
         // e.g. a,00FF
         Serial.print("Setting address bus to 0x");
-        Serial.println(cmdbuf + 2);
+        Serial.print(cmdbuf + 2);
+        Serial.print(" ");
         Serial.println(startAddress);
         set_address_bus(startAddress);
-
         break;
- 
-         
+  
       case READ_HEX:
         //set a default if needed to prevent infinite loop
         if (lineLength == 0) lineLength = 16;
@@ -803,28 +663,11 @@ static const char MINST2[] PROGMEM = "\n\rTransfer finished. switch back to NORM
            dataLength = 0x80;
         }
         endAddress = startAddress + dataLength - 1;
-        Serial.println("Checking for anything that isnt an FF");
+        Serial.println("Checking for anything that isn\'t an FF");
         blank_check(startAddress, dataLength);
         break;
-
-      case READ_ITL:
-        break;
-
-      case WRITE_HEX: // t xxxxx 0yyzz  Write at xxxxx the two bytes yy and zz
-        // simple test write of two bytes at the address
-        a = ((dataLength >> 8) & 0xff);
-        b = dataLength & 0xff;
-        write_two_bytes(startAddress, a, b);
-        break;
-        
-      case ADDEBUG:
-         setaddress(startAddress);
-         break;
-         
+                 
       case WRITE_XMODEM:
- //       Serial.println("Please start an xmodem transfer in your terminal ... ");
- //       Serial.println("when the transfer finishes remove the Vpp voltage and switch Vcc back to 5V.");
- //       Serial.println("If its a 27C512 you will also need to connect OE* back to the arduino)");
         bytes = 0;
         total=0;
         flashaddress=startAddress;
@@ -833,14 +676,13 @@ static const char MINST2[] PROGMEM = "\n\rTransfer finished. switch back to NORM
         Serial.print((__FlashStringHelper*)MINST1);
         int32_t sizeReceived = xmodem_receive(NULL, input_handler, data_handler);
 
-//printf("Transfer complete - %ld bytes written to EEPROM\n\r", sizeReceived);
-        delay(2000);
+        delay(1000);
         while (Serial.available()) Serial.read();
         Serial.print((__FlashStringHelper*)MINST2);
         printAddress(sizeReceived); Serial.print(" bytes written\n\r");
         break;
+        
       default:
         break;
     }
-//  }
 }

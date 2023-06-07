@@ -5,9 +5,4 @@
 #define HC595
 
 
-// Only define one of these. FAST_IO is only a little bit faster
-//#define FAST_IO
-#define OLD_IO
-
-
 #endif
