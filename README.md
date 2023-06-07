@@ -8,5 +8,7 @@ get a working programmer for these two chips.
 This was used to program Eproms for use with various "Retro" design z80 computers,
 mostly based on RC2014 designs.
 
+I am going to create a instructables ... soonish
+
 More to follow....
 
