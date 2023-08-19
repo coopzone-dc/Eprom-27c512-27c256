@@ -1,7 +1,9 @@
 //coop 18/05/2023 1
-//coop v1 7/6/23, removed fast io, not needed. few tweaks to layout etc.
-
-#define VERSION "V 1.0 7/6/23"
+//coop 18/05/23 added backspace / delete option
+//coop v1.1 7/6/23, removed fast io, not needed. few tweaks to layout etc.
+//coop v1.2 10/8/23 added return sequence to make display cleaner
+//coop v1.3 12/8/23 added option to read EEprom in intel hex format
+#define VERSION "V 1.3 12/8/23"
 
 #include <Arduino.h>
 #include <stdio.h>
@@ -69,6 +71,7 @@ unsigned long flashaddress;
 #define HELP 3
 
 #define READ_HEX    10
+#define IREAD_HEX   11
 
 #define WRITE_BIN   21
 #define WRITE_XMODEM 23
@@ -344,6 +347,9 @@ byte parseCommand() {
     case 'r':
       retval = READ_HEX;
       break;
+    case 'i':
+      retval = IREAD_HEX;
+      break;
     case 'w':
       retval = WRITE_XMODEM;
       break;
@@ -462,6 +468,63 @@ void read_block(unsigned long  from, unsigned long  to, int linelength)
   Serial.print("\r\n");
 }  
 
+
+/**
+ * read a data block from eeprom and write out a intel hex dump
+ * of the data to serial connection
+ * @param from       start address to read fromm
+ * @param to         last address to read from
+ * @param linelength how many hex values are written in one line
+ **/
+void iread_block(unsigned long  from, unsigned long  to, int linelength)
+{
+  flashaddress=from;
+  set_address_bus(flashaddress);
+ 
+  //count the number fo values that are already printed out on the
+  //current line
+  int        outcount = 0;
+  unsigned int CHK = 0;
+  //loop from "from address" to "to address" (included)
+  
+  for (unsigned long address = from; address <= to; address++) {   
+    if (outcount == 0) {
+      //print out the start of record 
+      Serial.print("\r\n:");
+      // set the number of bytes as either 16 or whatever is left until last address
+      if ((to - address+1) < linelength) CHK=(to - address+1); else CHK = linelength;    
+      printByte(CHK);
+
+      // Print the 4 byte hex address (since address can be 5 digits, it's to big. At this point a fix is needed but this goes upto 64k
+      printByte(address / 256);
+      printByte(address % 256);
+      
+      // Add the two address bytes to the checksum value
+      CHK += (address / 256);
+      CHK += (address % 256);
+      Serial.print("00"); //record type 00 always 00 until a fix for bigger eeproms, this goes upto 64k
+    }
+    
+    //print data
+    unsigned int data = read_next_byte();
+    printByte(data);
+    //add into checksum
+    CHK += data;
+    outcount = (++outcount % linelength);
+    //if we are at 16 bytes (linelength) then new line
+    if (outcount == 0){
+      //Print the checksum for this line
+      printByte(((CHK % 256)^255)+1);
+      CHK=0;
+    }
+  }
+  // we finished so see if anything left to print, ie the checksum of the last line
+  if (outcount != 0) printByte(((CHK % 256)^255)+1);
+  //end of hex file record
+  Serial.print("\n\r:00000001FF\n\r"); //end of intel hex file
+}
+
+
 void read_md5(unsigned long startAddress, unsigned long dataLength) {
   unsigned long  bytesleft;
   int bytestoprocess;
@@ -555,6 +618,7 @@ void menu() {
 static const char MMENU[] PROGMEM ="\n\r"
   "  a nnnnn - Set address (for debug)\n\r"
   "  r nnnnn mmmmm - show mmmmm bytes at address nnnnn\n\r"
+  "  i nnnnn mmmmm - show mmmmm bytes at address nnnnn in Intex Hex format\n\r"
   "  w nnnnn - write to eprom using xmodem transfer\n\r"
   "  m nnnnn mmmmm - md5sum rom content starting at nnnnn for mmmmmm bytes long\n\r"
   "  b nnnnn mmmmm - Check for FF\'s from nnnnn for mmmmmm bytes long\n\r"
@@ -616,8 +680,9 @@ static const char MINST2[] PROGMEM = "\n\rTransfer finished. switch back to NORM
 
     Serial.print("\r% "); // show the prompt
     readCommand();
-    byte cmd = parseCommand();
     Serial.print("\n\r");
+    byte cmd = parseCommand();
+    //Serial.print("\n\r");
     
     switch (cmd) {
 
@@ -645,6 +710,15 @@ static const char MINST2[] PROGMEM = "\n\rTransfer finished. switch back to NORM
         }
         endAddress = startAddress + dataLength - 1;
         read_block(startAddress, endAddress, lineLength);
+        break;
+     case IREAD_HEX: //intel format
+        //set a default if needed to prevent infinite loop
+        if (lineLength == 0) lineLength = 16;
+        if (dataLength == 0) {
+           dataLength = 0x80;
+        }
+        endAddress = startAddress + dataLength - 1;
+        iread_block(startAddress, endAddress, lineLength);
         break;
       case MD5SUM:
         //set a default if needed to prevent infinite loop
