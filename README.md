@@ -17,6 +17,9 @@ I have also published the EDA design on OSHWLab:
 
 https://oshwlab.com/mycoopzone/eprom_copy
 
+The board required 12.7v supply to program the Eproms.(most are happy between 12.0v and 13.0v), to provide this I use a cheap chinese generic step up supply board
+it has a 5v input and the output can be adjusted. the photo shows the board attached to the underside of the pcb.
 
+![Alt text](images/IMG_5499.jpg)
 
 Have fun
