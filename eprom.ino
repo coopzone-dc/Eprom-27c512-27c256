@@ -18,7 +18,7 @@
 #define HIGHADDRESSLATCH A1
 #define CE      A3
 #define OE      A4
-#define WE   A5
+#define WE      A5
 
 #define FLASHA16   10
 #define FLASHA17   11
@@ -619,7 +619,7 @@ static const char MMENU[] PROGMEM ="\n\r"
   "  a nnnnn - Set address (for debug)\n\r"
   "  r nnnnn mmmmm - show mmmmm bytes at address nnnnn\n\r"
   "  i nnnnn mmmmm - show mmmmm bytes at address nnnnn in Intex Hex format\n\r"
-  "  w nnnnn - write to eprom using xmodem transfer\n\r"
+  "  w nnnnn - write to eprom from binary file using xmodem transfer\n\r"
   "  m nnnnn mmmmm - md5sum rom content starting at nnnnn for mmmmmm bytes long\n\r"
   "  b nnnnn mmmmm - Check for FF\'s from nnnnn for mmmmmm bytes long\n\r"
   "  h repeat this menu\n\r";
