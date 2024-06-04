@@ -13,5 +13,10 @@ I'm going to publish this using EasyEDA as soon as I get time.
 
 https://www.instructables.com/Classic-27c256-27c512-EPROM-Programmer-Using-Nano/
 
-More to follow....
+I have also published the EDA design on OSHWLab:
 
+https://oshwlab.com/mycoopzone/eprom_copy
+
+
+
+Have fun
