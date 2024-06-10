@@ -648,7 +648,7 @@ void setup() {
 
   xmodem_set_config(XMODEM_MODE_ORIGINAL);
   Serial.begin(115200);
-  Serial.print("Started ");  
+  Serial.print("Started EPROM Programmer ");
   Serial.print(VERSION);
   menu();
 }

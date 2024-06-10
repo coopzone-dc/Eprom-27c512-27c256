@@ -1,6 +1,23 @@
 Basic eprom programmer using Arduino Nano.
 
-This is the Arduino scetch needed for an Eprom programmer for 27C256 and 27C512 Eprom chips
+This is the Arduino scetch needed for an Eprom programmer for 27C256 and 27C512 Eprom chips.
+It doesn't need any special PC software for operation.
+A terminal software with XMODEM support for uploading the binary is sufficient.
+On Linux you can use Minicom and on Windows TeraTerm.
+Also `console.py` should work fine.
+
+The onboard CLI looks like this:
+```
+Started EPROM Programmer V 1.3 12/8/23
+  a nnnnn - Set address (for debug)
+  r nnnnn mmmmm - show mmmmm bytes at address nnnnn
+  i nnnnn mmmmm - show mmmmm bytes at address nnnnn in Intex Hex format
+  w nnnnn - write to eprom from binary file using xmodem transfer
+  m nnnnn mmmmm - md5sum rom content starting at nnnnn for mmmmmm bytes long
+  b nnnnn mmmmm - Check for FF's from nnnnn for mmmmmm bytes long
+  h repeat this menu
+%
+```
 
 This project was put together using bits from other designs. The main aim was just to
 get a working programmer for these two chips.
